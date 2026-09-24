@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SoftConnet — 交互原型</title>
+  <style>
+    :root { font-family: Geist, "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif; color-scheme: dark; --base:#191a1c; --side:#161719; --panel:#1c1d1f; --hover:#252629; --selected:#2b2d30; --line:#303135; --text:#ebebec; --muted:#a4a6aa; --faint:#73757a; --accent:#a9b9c4; --warn:#ca9f75; --button:#e3e5e6; --buttonText:#1d1e20; }
+    :root[data-theme="light"] { color-scheme: light; --base:#fff; --side:#f4f4f3; --panel:#fafafa; --hover:#f4f4f3; --selected:#eeefef; --line:#e5e5e3; --text:#292b2d; --muted:#686b70; --faint:#999ca0; --accent:#526674; --warn:#ad7548; --button:#2b2d30; --buttonText:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; background:var(--base); color:var(--text); }
+    button,input { font:inherit; }
+    button { cursor:pointer; }
+    button:active { transform:scale(.985); }
+    button:focus-visible,input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    .app { display:grid; grid-template-columns:228px minmax(0,1fr); min-height:100dvh; }
+    .sidebar { background:var(--side); border-right:1px solid var(--line); padding:11px 8px 17px; display:flex; flex-direction:column; min-width:0; }
+    .brand { display:flex; align-items:center; gap:10px; height:36px; padding:0 10px 0 8px; font-size:13px; font-weight:670; letter-spacing:-.025em; }
+    .brand-mark { width:18px; height:18px; position:relative; display:inline-block; }
+    .brand-mark:before,.brand-mark:after { content:""; position:absolute; border:1.5px solid var(--accent); width:10px; height:10px; border-radius:3px; transform:rotate(-38deg); }
+    .brand-mark:before { left:1px; top:1px; }
+    .brand-mark:after { right:0; bottom:0; }
+    .search { height:31px; margin:9px 5px 23px; border:1px solid var(--line); border-radius:6px; display:flex; align-items:center; gap:8px; padding:0 9px; color:var(--faint); }
+    .search:hover,.search:focus-within { border-color:var(--faint); }
+    .search-symbol { font-size:15px; line-height:1; }
+    .search input { border:0; background:transparent; color:var(--text); outline:none; width:100%; min-width:0; font-size:11px; }
+    .search input::placeholder { color:var(--faint); }
+    .shortcut { white-space:nowrap; font-size:10px; color:var(--faint); }
+    .side-heading { display:flex; align-items:center; justify-content:space-between; height:28px; margin:0 9px 4px; color:var(--faint); font-size:10px; font-weight:630; }
+    .icon-button { border:0; background:transparent; color:var(--muted); padding:3px 6px; border-radius:5px; font-size:16px; line-height:1; }
+    .icon-button:hover { color:var(--text); background:var(--hover); }
+    .source-item { display:flex; align-items:center; gap:10px; height:34px; width:100%; padding:0 10px; border:0; border-radius:5px; background:transparent; color:var(--muted); text-align:left; font-size:11px; }
+    .source-item:hover { background:var(--hover); color:var(--text); }
+    .source-item.active { background:var(--selected); color:var(--text); }
+    .source-item.active .source-icon { color:var(--accent); }
+    .source-icon { width:15px; height:16px; color:var(--faint); flex:none; }
+    .source-item span:nth-child(2) { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .source-item small { font-size:10px; color:var(--faint); }
+    .side-bottom { margin-top:auto; }
+    .folder-item { display:flex; align-items:center; gap:8px; color:var(--muted); height:30px; padding:0 10px; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .folder-item:before { content:""; width:10px; height:8px; border:1.5px solid var(--faint); border-radius:2px; display:inline-block; flex:none; }
+    .workspace { min-width:0; display:grid; grid-template-rows:46px minmax(0,1fr); }
+    .topbar { border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; padding:0 27px; color:var(--muted); font-size:11px; }
+    .topbar strong { color:var(--text); font-weight:600; }
+    .topbar .sep { color:var(--faint); }
+    .topbar-actions { margin-left:auto; display:flex; gap:5px; }
+    .quiet-button { border:0; border-radius:5px; background:transparent; color:var(--muted); padding:6px 9px; font-size:11px; }
+    .quiet-button:hover { background:var(--hover); color:var(--text); }
+    .main { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) 268px; }
+    .content { min-width:0; overflow:auto; }
+    .inner { max-width:1050px; margin:auto; padding:37px 42px 80px; }
+    .titleline { display:flex; align-items:flex-start; gap:13px; }
+    .document-icon { width:31px; height:35px; border:1px solid var(--faint); border-radius:5px; position:relative; flex:none; margin-top:2px; }
+    .document-icon:after { content:""; position:absolute; width:13px; height:1px; background:var(--faint); left:8px; top:18px; box-shadow:0 5px var(--faint); opacity:.7; }
+    .document-icon.folder { height:27px; margin-top:6px; }
+    .document-icon.folder:after { width:12px; height:3px; left:0; top:-4px; box-shadow:none; }
+    h1 { font-size:19px; line-height:1.35; margin:0 0 5px; font-weight:635; letter-spacing:-.025em; overflow-wrap:anywhere; }
+    .path { color:var(--faint); font:10px/1.6 "Geist Mono",ui-monospace,SFMono-Regular,monospace; word-break:break-all; }
+    .title-actions { margin-left:auto; flex:none; display:flex; gap:7px; }
+    .button { border:1px solid var(--line); border-radius:6px; background:var(--panel); color:var(--text); min-height:29px; padding:5px 10px; font-size:11px; font-weight:550; }
+    .button:hover { background:var(--hover); }
+    .button.primary { border-color:var(--button); background:var(--button); color:var(--buttonText); font-weight:640; }
+    .button.primary:hover { opacity:.9; }
+    .section { margin-top:35px; }
+    .section-heading { display:flex; align-items:center; gap:12px; margin-bottom:15px; }
+    h2 { font-size:12px; font-weight:640; margin:0; }
+    .section-heading .detail { color:var(--faint); font-size:10px; }
+    .section-heading .end { margin-left:auto; }
+    .map { display:grid; grid-template-columns:minmax(160px,.7fr) 64px minmax(240px,1.3fr); align-items:center; min-height:170px; padding:16px 19px; border:1px solid var(--line); border-radius:9px; background:var(--panel); }
+    .map-source { min-width:0; }
+    .map-kicker { color:var(--faint); font-size:9px; font-weight:650; letter-spacing:.055em; margin-bottom:7px; }
+    .map-source-name { font-size:12px; font-weight:620; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .map-source-path { color:var(--faint); font:10px/1.5 "Geist Mono",ui-monospace,monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:4px; }
+    .map-line { height:1px; background:var(--line); position:relative; }
+    .map-line:after { content:""; width:6px; height:6px; border-radius:50%; background:var(--accent); position:absolute; right:0; top:-2.5px; }
+    .map-targets { border-left:1px solid var(--line); min-width:0; }
+    .map-target { display:flex; align-items:center; gap:10px; height:42px; padding:0 5px 0 13px; position:relative; min-width:0; }
+    .map-target:before { content:""; position:absolute; width:13px; height:1px; background:var(--line); left:0; }
+    .map-target strong { display:block; font-size:11px; font-weight:570; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .map-target .target-path { display:block; color:var(--faint); font:9px/1.5 "Geist Mono",ui-monospace,monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:3px; }
+    .map-target .target-content { min-width:0; flex:1; }
+    .map-target.selected strong { color:var(--accent); }
+    .status-dot { width:6px; height:6px; border-radius:50%; border:1px solid var(--muted); flex:none; }
+    .status-dot.bad { border-color:var(--warn); background:var(--warn); }
+    .filters { display:flex; align-items:center; gap:3px; }
+    .filter { border:0; border-radius:5px; background:transparent; color:var(--faint); padding:5px 8px; font-size:10px; }
+    .filter:hover { color:var(--text); background:var(--hover); }
+    .filter.active { color:var(--text); background:var(--selected); }
+    .list { border-top:1px solid var(--line); }
+    .list-head,.list-row { display:grid; grid-template-columns:minmax(115px,.8fr) minmax(195px,2fr) 85px; gap:14px; align-items:center; }
+    .list-head { min-height:29px; padding:0 13px; color:var(--faint); font-size:10px; border-bottom:1px solid var(--line); }
+    .list-row { min-height:45px; width:100%; text-align:left; border:0; border-bottom:1px solid var(--line); padding:0 13px; background:transparent; color:var(--text); }
+    .list-row:hover { background:var(--hover); }
+    .list-row.selected { background:var(--selected); }
+    .list-row .project { font-size:11px; font-weight:560; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .list-row .mono { color:var(--muted); font:10px "Geist Mono",ui-monospace,SFMono-Regular,monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .status { color:var(--muted); font-size:10px; white-space:nowrap; }
+    .status.bad { color:var(--warn); }
+    .status .status-dot { display:inline-block; vertical-align:0; margin-right:6px; }
+    .empty { color:var(--faint); font-size:11px; text-align:center; padding:30px 10px; }
+    .inspector { border-left:1px solid var(--line); padding:25px 20px; background:var(--base); min-width:0; }
+    .inspector-caption { font-size:10px; color:var(--faint); margin-bottom:20px; }
+    .inspector-name { font-size:13px; font-weight:620; margin:0 0 25px; overflow-wrap:anywhere; }
+    .property { padding:14px 0; border-top:1px solid var(--line); }
+    .property dt { color:var(--faint); font-size:10px; margin-bottom:8px; }
+    .property dd { margin:0; color:var(--muted); font:10px/1.6 "Geist Mono",ui-monospace,monospace; word-break:break-all; }
+    .property dd.normal { font-family:inherit; font-size:11px; color:var(--text); }
+    .inspector-actions { display:flex; gap:7px; margin-top:17px; flex-wrap:wrap; }
+    .inspector-note { margin-top:25px; color:var(--faint); font-size:10px; line-height:1.6; }
+    dialog { width:min(410px,calc(100% - 24px)); border:1px solid var(--line); border-radius:10px; padding:24px; background:var(--panel); color:var(--text); box-shadow:0 24px 70px #0006; }
+    dialog::backdrop { background:#050607a8; }
+    dialog h2 { font-size:16px; margin:0 0 7px; }
+    dialog p { color:var(--muted); font-size:11px; line-height:1.6; margin:0 0 18px; }
+    label { display:block; color:var(--muted); font-size:11px; margin:14px 0; }
+    input.field { display:block; width:100%; border:1px solid var(--line); border-radius:6px; padding:9px 10px; margin-top:7px; color:var(--text); background:var(--base); outline:none; font-size:11px; }
+    input.field:focus { border-color:var(--accent); }
+    .form-error { min-height:16px; color:var(--warn); font-size:10px; }
+    .dialog-actions { display:flex; justify-content:flex-end; gap:7px; margin-top:18px; }
+    .toast { position:fixed; bottom:20px; left:50%; transform:translate(-50%,8px); opacity:0; background:var(--button); color:var(--buttonText); font-size:11px; padding:9px 13px; border-radius:6px; pointer-events:none; transition:opacity .18s,transform .18s; max-width:calc(100vw - 30px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .toast.show { opacity:1; transform:translate(-50%,0); }
+    @media (max-width:1050px) { .main { grid-template-columns:minmax(0,1fr); } .inspector { display:none; } }
+    @media (max-width:700px) { .app { display:block; } .sidebar { padding-bottom:8px; border-right:0; border-bottom:1px solid var(--line); } .brand { height:28px; } .search,.side-heading,.side-bottom { display:none; } .source-list { display:flex; overflow:auto; } .source-item { width:auto; min-width:145px; flex:none; } .workspace { grid-template-rows:39px minmax(0,1fr); } .topbar { padding:0 17px; } .inner { padding:27px 17px 50px; } .titleline { flex-wrap:wrap; } .title-actions { width:100%; margin:5px 0 0 44px; } .map { grid-template-columns:1fr; padding:18px; } .map-line { display:none; } .map-targets { border-left:0; margin-top:12px; } .map-target:before { display:none; } .map-target { padding-left:0; } .list-head,.list-row { grid-template-columns:minmax(80px,.8fr) minmax(110px,1.2fr) 62px; gap:6px; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar"><div class="brand"><span class="brand-mark" aria-hidden="true"></span>SoftConnet</div><div class="search"><span class="search-symbol">⌕</span><input id="search" placeholder="搜索事实源" aria-label="搜索事实源"><span class="shortcut">⌘ K</span></div><div class="side-heading"><span>事实源</span><button class="icon-button" id="addSource" title="添加事实源" aria-label="添加事实源">+</button></div><div id="sources" class="source-list"></div><div class="side-bottom"><div class="side-heading"><span>扫描目录</span><button class="icon-button" id="scan" title="添加扫描目录" aria-label="添加扫描目录">+</button></div><div class="folder-item">~/Projects</div></div></aside>
+    <div class="workspace"><header class="topbar"><span>事实源</span><span class="sep">/</span><strong id="breadcrumb"></strong><div class="topbar-actions"><button class="quiet-button" id="refresh">刷新</button><button class="quiet-button" id="theme">切换外观</button></div></header><div class="main"><main class="content"><div class="inner" id="content"></div></main><aside class="inspector" id="inspector"></aside></div></div>
+  </div>
+  <dialog id="addDialog"><h2>新增链接</h2><p>选择项目中的位置，事实源保持在原处。</p><form id="addForm"><label>项目名称<input class="field" id="projectName" placeholder="例如：TransOptima" required></label><label>目标文件夹<input class="field" id="folderPath" placeholder="~/Projects/TransOptima/docs" required></label><label>链接名称<input class="field" id="linkName" required></label><div class="form-error" id="formError"></div><div class="dialog-actions"><button class="button" type="button" id="cancelAdd">取消</button><button class="button primary" type="submit">创建链接</button></div></form></dialog>
+  <dialog id="sourceDialog"><h2>添加事实源</h2><p>原文件或文件夹不会移动。</p><form id="sourceForm"><label>文件或文件夹路径<input class="field" id="sourcePath" placeholder="~/Documents/shared/gear-design.md" required></label><div class="dialog-actions"><button class="button" type="button" id="cancelSource">取消</button><button class="button primary" type="submit">添加</button></div></form></dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script>
+    const state = { source:0, link:0, filter:'all', query:'', sources:[
+      { path:'~/Documents/shared/gear-design.md', type:'文件', links:[
+        { project:'TransOptima', path:'~/Projects/TransOptima/docs/gear-design.md', status:'正常' },
+        { project:'gear_agent', path:'~/Projects/gear_agent/reference/gear-design.md', status:'正常' },
+        { project:'planetary_gearbox', path:'~/Projects/planetary_gearbox/gear-design.md', status:'源文件缺失' }
+      ] },
+      { path:'~/Documents/shared/engineering-terms', type:'文件夹', links:[{ project:'TransOptima', path:'~/Projects/TransOptima/terminology', status:'正常' }] }
+    ] };
+    const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const base = p => p.split(/[\\/]/).filter(Boolean).pop() || p;
+    const parent = p => p.slice(0,p.lastIndexOf('/')) || p;
+    const current = () => state.sources[state.source];
+    const selected = () => current()?.links[state.link];
+    const dot = bad => `<span class="status-dot ${bad?'bad':''}"></span>`;
+    function toast(value) { const el=document.getElementById('toast'); el.textContent=value; el.classList.add('show'); clearTimeout(window.toastTimer); window.toastTimer=setTimeout(()=>el.classList.remove('show'),2800); }
+    function renderSources() { const list=document.getElementById('sources'); list.innerHTML=state.sources.map((s,i)=>({s,i})).filter(({s})=>base(s.path).toLowerCase().includes(state.query.toLowerCase())).map(({s,i})=>`<button class="source-item ${i===state.source?'active':''}" data-source="${i}"><svg class="source-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${s.type==='文件夹'?'<path d="M1.5 4.5V3h4l1.5 1.5h7.5v9h-13z"/>':'<path d="M3 1.5h6l4 4v9H3zM9 1.5v4h4"/>'}</svg><span>${esc(base(s.path))}</span><small>${s.links.length}</small></button>`).join('') || '<div class="empty">没有匹配的事实源</div>'; list.querySelectorAll('[data-source]').forEach(el=>el.onclick=()=>{state.source=Number(el.dataset.source);state.link=0;state.filter='all';render();}); }
+    function renderInspector() { const s=current(),l=selected(),el=document.getElementById('inspector'); if(!l){el.innerHTML='<div class="inspector-caption">详情</div><div class="empty">选择一条链接查看详情</div>';return;} el.innerHTML=`<div class="inspector-caption">链接详情</div><h3 class="inspector-name">${esc(l.project)}</h3><dl><div class="property"><dt>状态</dt><dd class="normal">${dot(l.status!=='正常')}${esc(l.status)}</dd></div><div class="property"><dt>链接位置</dt><dd>${esc(l.path)}</dd></div><div class="property"><dt>指向</dt><dd>${esc(s.path)}</dd></div></dl><div class="inspector-actions"><button class="button" id="reveal">显示位置</button><button class="button" id="remove">删除链接</button></div><div class="inspector-note">删除只影响选中的软链接，不会删除事实源。当前为演示数据。</div>`; document.getElementById('reveal').onclick=()=>toast(`演示：打开 ${l.path}`); document.getElementById('remove').onclick=removeLink; }
+    function removeLink(){const s=current(),l=selected();if(!l)return;if(confirm(`删除 ${l.project} 中的链接？\n${l.path}\n\n事实源会保留。`)){s.links.splice(state.link,1);state.link=Math.max(0,Math.min(state.link,s.links.length-1));render();toast('已删除演示链接');}}
+    function render(){renderSources();const s=current();document.getElementById('breadcrumb').textContent=s?base(s.path):'';if(!s){document.getElementById('content').innerHTML='<div class="empty">添加事实源，开始管理它在项目中的链接。</div>';renderInspector();return;}const shown=s.links.map((l,i)=>({l,i})).filter(({l})=>state.filter==='all'||(state.filter==='ok'?l.status==='正常':l.status!=='正常'));document.getElementById('content').innerHTML=`<div class="titleline"><span class="document-icon ${s.type==='文件夹'?'folder':''}" aria-hidden="true"></span><div><h1>${esc(base(s.path))}</h1><div class="path">${esc(s.path)}</div></div><div class="title-actions"><button class="button primary" id="addLink">＋ 新增链接</button></div></div>
+      <section class="section"><div class="section-heading"><h2>引用关系</h2><span class="detail">源文件连接到 ${s.links.length} 个位置</span></div><div class="map"><div class="map-source"><div class="map-kicker">事实源 · ${esc(s.type)}</div><div class="map-source-name">${esc(base(s.path))}</div><div class="map-source-path">${esc(parent(s.path))}</div></div><div class="map-line"></div><div class="map-targets">${s.links.length?s.links.map((l,i)=>`<div class="map-target ${i===state.link?'selected':''}"><div class="target-content"><strong>${esc(l.project)}</strong><span class="target-path">${esc(parent(l.path))}</span></div>${dot(l.status!=='正常')}</div>`).join(''):'<div class="empty">还没有项目链接</div>'}</div></div></section>
+      <section class="section"><div class="section-heading"><h2>链接</h2><span class="detail">${s.links.length}</span><div class="end filters"><button class="filter ${state.filter==='all'?'active':''}" data-filter="all">全部</button><button class="filter ${state.filter==='ok'?'active':''}" data-filter="ok">正常</button><button class="filter ${state.filter==='bad'?'active':''}" data-filter="bad">需处理</button></div></div><div class="list"><div class="list-head"><span>项目</span><span>链接路径</span><span>状态</span></div>${shown.length?shown.map(({l,i})=>`<button class="list-row ${i===state.link?'selected':''}" data-link="${i}"><span class="project">${esc(l.project)}</span><span class="mono" title="${esc(l.path)}">${esc(l.path)}</span><span class="status ${l.status==='正常'?'':'bad'}">${dot(l.status!=='正常')}${esc(l.status)}</span></button>`).join(''):'<div class="empty">此筛选条件下没有链接</div>'}</div></section>`;document.getElementById('addLink').onclick=()=>{document.getElementById('linkName').value=base(s.path);document.getElementById('addDialog').showModal();};document.querySelectorAll('[data-filter]').forEach(el=>el.onclick=()=>{state.filter=el.dataset.filter;render();});document.querySelectorAll('[data-link]').forEach(el=>el.onclick=()=>{state.link=Number(el.dataset.link);render();});renderInspector();}
+    document.getElementById('search').oninput=e=>{state.query=e.target.value;renderSources();};
+    document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();document.getElementById('search').focus();}});
+    document.getElementById('theme').onclick=()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';};
+    document.getElementById('refresh').onclick=()=>toast('演示：链接状态已刷新');
+    document.getElementById('addSource').onclick=()=>document.getElementById('sourceDialog').showModal();
+    document.getElementById('scan').onclick=()=>toast('演示：实际应用会在这里选择目录并扫描已有软链接');
+    document.getElementById('cancelAdd').onclick=()=>document.getElementById('addDialog').close();
+    document.getElementById('cancelSource').onclick=()=>document.getElementById('sourceDialog').close();
+    document.getElementById('sourceForm').onsubmit=e=>{e.preventDefault();const path=document.getElementById('sourcePath').value.trim();if(!path)return;state.sources.push({path,type:'文件',links:[]});state.source=state.sources.length-1;state.link=0;state.query='';document.getElementById('search').value='';document.getElementById('sourceDialog').close();e.target.reset();render();toast('已添加演示事实源');};
+    document.getElementById('addForm').onsubmit=e=>{e.preventDefault();const s=current(),project=document.getElementById('projectName').value.trim(),folder=document.getElementById('folderPath').value.trim(),name=document.getElementById('linkName').value.trim(),path=folder.replace(/[\\/]$/,'')+'/'+name;if(s.links.some(l=>l.path===path)){document.getElementById('formError').textContent='目标位置已有链接，请更换名称。';return;}s.links.push({project,path,status:'正常'});state.link=s.links.length-1;state.filter='all';document.getElementById('addDialog').close();document.getElementById('formError').textContent='';e.target.reset();render();toast('已创建演示链接');};
+    render();
+  </script>
+</body>
+</html>

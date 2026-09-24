@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Geist, "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color-scheme: dark;
+  --base: #191a1c;
+  --side: #161719;
+  --panel: #1c1d1f;
+  --hover: #252629;
+  --selected: #2b2d30;
+  --line: #303135;
+  --text: #ebebec;
+  --muted: #a4a6aa;
+  --faint: #73757a;
+  --accent: #a9b9c4;
+  --warn: #ca9f75;
+  --button: #e3e5e6;
+  --button-text: #1d1e20;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --base: #fff;
+  --side: #f4f4f3;
+  --panel: #fafafa;
+  --hover: #f4f4f3;
+  --selected: #eeefef;
+  --line: #e5e5e3;
+  --text: #292b2d;
+  --muted: #686b70;
+  --faint: #999ca0;
+  --accent: #526674;
+  --warn: #ad7548;
+  --button: #2b2d30;
+  --button-text: #fff;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: var(--base); color: var(--text); }
+button { cursor: pointer; }
+button:active { transform: scale(.985); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--faint) 34%, transparent); border: 3px solid var(--base); border-radius: 10px; }
+
+.brand-mark { width: 18px; height: 18px; position: relative; display: inline-block; }
+.brand-mark::before, .brand-mark::after { content: ""; position: absolute; border: 1.5px solid var(--accent); width: 10px; height: 10px; border-radius: 3px; transform: rotate(-38deg); }
+.brand-mark::before { left: 1px; top: 1px; }
+.brand-mark::after { right: 0; bottom: 0; }
+.map-connector { height: 1px; background: var(--line); position: relative; }
+.map-connector::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); position: absolute; right: 0; top: -2.5px; }
+.map-targets { border-left: 1px solid var(--line); }
+.map-target { position: relative; }
+.map-target::before { content: ""; position: absolute; width: 13px; height: 1px; background: var(--line); left: 0; top: 50%; }
+.status-dot { width: 6px; height: 6px; border: 1px solid var(--muted); border-radius: 50%; display: inline-block; flex: none; }
+.status-dot.warn { border-color: var(--warn); background: var(--warn); }
+
+@media (max-width: 700px) {
+  .map-targets { border-left: 0; }
+  .map-target::before { display: none; }
+}
