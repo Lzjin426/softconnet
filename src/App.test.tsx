@@ -96,10 +96,17 @@ test("shows a scanned link and a rejected name collision without losing the exis
   });
   await user.click(screen.getByRole("button", { name: "新增链接" }));
   const dialog = screen.getByRole("dialog");
+  const targetFolder = within(dialog).getByRole("textbox", { name: "目标文件夹绝对路径" });
+  await user.click(within(dialog).getByRole("button", { name: "创建链接" }));
+  expect(targetFolder.getAttribute("aria-invalid")).toBe("true");
+  expect(targetFolder.getAttribute("aria-describedby")).toBe("target-folder-error");
+  expect(within(dialog).getByText("请输入目标文件夹的绝对路径")).toHaveProperty("id", "target-folder-error");
   await user.click(within(dialog).getByRole("button", { name: "浏览" }));
   await user.click(within(dialog).getByRole("button", { name: "创建链接" }));
 
   expect(await within(dialog).findByRole("alert")).toHaveProperty("textContent", expect.stringContaining("未进行覆盖"));
+  expect(targetFolder.getAttribute("aria-invalid")).toBe("false");
+  expect(targetFolder.getAttribute("aria-describedby")).toBeNull();
   await user.click(within(dialog).getByRole("button", { name: "关闭" }));
   expect(screen.getByRole("button", { name: `查看链接 alpha ${link}` })).toBeTruthy();
   expect(invoke).toHaveBeenCalledWith("create_link", { source, folder: "/projects/beta", name: "shared.md" });

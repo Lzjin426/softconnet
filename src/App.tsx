@@ -23,7 +23,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
+import { Kbd } from "@/components/ui/kbd";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,10 +42,6 @@ import {
 } from "./types";
 
 const ICON_WEIGHT = "regular" as const;
-const outlineButton = "rounded-md border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[11px] font-medium text-[var(--text)] transition-colors hover:bg-[var(--hover)] disabled:opacity-40";
-const primaryButton = "rounded-md border border-[var(--button)] bg-[var(--button)] px-3 py-1.5 text-[11px] font-semibold text-[var(--button-text)] transition-opacity hover:opacity-90 disabled:opacity-40";
-const fieldClass = "w-full rounded-md border border-[var(--line)] bg-[var(--base)] px-3 py-2 text-[11px] text-[var(--text)] outline-none placeholder:text-[var(--faint)]";
-
 function errorText(error: unknown): string {
   return typeof error === "string" ? error : error instanceof Error ? error.message : String(error);
 }
@@ -166,6 +165,27 @@ function ModalFrame({ heading, description, busy, onClose, children }: ModalFram
   );
 }
 
+function PathPickerField({ id, label, value, placeholder, error, busy, autoFocus, onChange, onBrowse }: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  error?: string;
+  busy: boolean;
+  autoFocus?: boolean;
+  onChange: (value: string) => void;
+  onBrowse: () => void;
+}) {
+  return <Field data-invalid={Boolean(error)}>
+    <FieldLabel htmlFor={id}>{label}</FieldLabel>
+    <InputGroup>
+      <InputGroupInput id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} autoFocus={autoFocus} disabled={busy} />
+      <InputGroupAddon align="inline-end"><InputGroupButton onClick={onBrowse} disabled={busy}>浏览</InputGroupButton></InputGroupAddon>
+    </InputGroup>
+    {error && <FieldError id={`${id}-error`}>{error}</FieldError>}
+  </Field>;
+}
+
 interface AddSourceDialogProps {
   kind: "file" | "directory";
   busy: boolean;
@@ -176,6 +196,7 @@ interface AddSourceDialogProps {
 function AddSourceDialog({ kind, busy, onClose, onAdd }: AddSourceDialogProps) {
   const [path, setPath] = useState("");
   const [error, setError] = useState("");
+  const [pathInvalid, setPathInvalid] = useState(false);
 
   async function choosePath() {
     try {
@@ -183,9 +204,11 @@ function AddSourceDialog({ kind, busy, onClose, onAdd }: AddSourceDialogProps) {
       if (result) {
         setPath(result);
         setError("");
+        setPathInvalid(false);
       }
     } catch (cause) {
       setError(errorText(cause));
+      setPathInvalid(false);
     }
   }
 
@@ -194,35 +217,35 @@ function AddSourceDialog({ kind, busy, onClose, onAdd }: AddSourceDialogProps) {
     const value = path.trim();
     if (!value) {
       setError("请输入事实源的绝对路径");
+      setPathInvalid(true);
       return;
     }
     if (!isAbsolutePath(value)) {
       setError("请输入绝对路径，例如 C:\\workspace\\notes 或 /workspace/notes");
+      setPathInvalid(true);
       return;
     }
     setError("");
+    setPathInvalid(false);
     try {
       await onAdd(value);
       onClose();
     } catch (cause) {
       setError(errorText(cause));
+      setPathInvalid(false);
     }
   }
 
   return (
     <ModalFrame heading={kind === "directory" ? "添加文件夹事实源" : "添加文件事实源"} description="事实源保留在原位置，路径可以直接手输，也可以从文件管理器选择。" busy={busy} onClose={onClose}>
-      <form onSubmit={submit} className="mt-5 space-y-4">
-        <div>
-          <label className="mb-1.5 block text-[11px] font-medium text-[var(--muted)]" htmlFor="source-path-input">事实源绝对路径</label>
-          <div className="flex gap-2">
-            <Input id="source-path-input" value={path} onChange={(event) => { setPath(event.target.value); setError(""); }} placeholder={pathExample(kind === "directory" ? "notes" : "shared.md")} className={`${fieldClass} min-w-0 flex-1`} autoFocus />
-            <Button type="button" className={outlineButton} onClick={choosePath} disabled={busy}>浏览</Button>
-          </div>
-        </div>
-        {error && <p role="alert" className="text-[11px] text-[var(--warn)]">{error}</p>}
+      <form onSubmit={submit} className="mt-5 flex flex-col gap-4">
+        <FieldGroup>
+          <PathPickerField id="source-path-input" label="事实源绝对路径" value={path} onChange={(value) => { setPath(value); setError(""); setPathInvalid(false); }} onBrowse={choosePath} placeholder={pathExample(kind === "directory" ? "notes" : "shared.md")} error={pathInvalid ? error : undefined} busy={busy} autoFocus />
+        </FieldGroup>
+        {error && !pathInvalid && <FieldError>{error}</FieldError>}
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" className={outlineButton} onClick={onClose} disabled={busy}>取消</Button>
-          <Button type="submit" className={primaryButton} disabled={busy}>{busy ? "正在添加…" : "添加事实源"}</Button>
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={busy}>取消</Button>
+          <Button type="submit" size="sm" disabled={busy}>{busy ? "正在添加…" : "添加事实源"}</Button>
         </div>
       </form>
     </ModalFrame>
@@ -238,6 +261,7 @@ interface ScanRootDialogProps {
 function ScanRootDialog({ busy, onClose, onAdd }: ScanRootDialogProps) {
   const [path, setPath] = useState("");
   const [error, setError] = useState("");
+  const [pathInvalid, setPathInvalid] = useState(false);
 
   async function choosePath() {
     try {
@@ -245,9 +269,11 @@ function ScanRootDialog({ busy, onClose, onAdd }: ScanRootDialogProps) {
       if (result) {
         setPath(result);
         setError("");
+        setPathInvalid(false);
       }
     } catch (cause) {
       setError(errorText(cause));
+      setPathInvalid(false);
     }
   }
 
@@ -256,35 +282,35 @@ function ScanRootDialog({ busy, onClose, onAdd }: ScanRootDialogProps) {
     const value = path.trim();
     if (!value) {
       setError("请输入扫描目录的绝对路径");
+      setPathInvalid(true);
       return;
     }
     if (!isAbsolutePath(value)) {
       setError("请输入扫描目录的绝对路径，例如 C:\\workspace\\projects");
+      setPathInvalid(true);
       return;
     }
     setError("");
+    setPathInvalid(false);
     try {
       await onAdd(value);
       onClose();
     } catch (cause) {
       setError(errorText(cause));
+      setPathInvalid(false);
     }
   }
 
   return (
     <ModalFrame heading="添加扫描目录" description="扫描目录用于发现已有软链接，不会移动或修改目录中的内容。" busy={busy} onClose={onClose}>
-      <form onSubmit={submit} className="mt-5 space-y-4">
-        <div>
-          <label className="mb-1.5 block text-[11px] font-medium text-[var(--muted)]" htmlFor="scan-path-input">扫描目录绝对路径</label>
-          <div className="flex gap-2">
-            <Input id="scan-path-input" value={path} onChange={(event) => { setPath(event.target.value); setError(""); }} placeholder={pathExample("projects")} className={`${fieldClass} min-w-0 flex-1`} autoFocus />
-            <Button type="button" className={outlineButton} onClick={choosePath} disabled={busy}>浏览</Button>
-          </div>
-        </div>
-        {error && <p role="alert" className="text-[11px] text-[var(--warn)]">{error}</p>}
+      <form onSubmit={submit} className="mt-5 flex flex-col gap-4">
+        <FieldGroup>
+          <PathPickerField id="scan-path-input" label="扫描目录绝对路径" value={path} onChange={(value) => { setPath(value); setError(""); setPathInvalid(false); }} onBrowse={choosePath} placeholder={pathExample("projects")} error={pathInvalid ? error : undefined} busy={busy} autoFocus />
+        </FieldGroup>
+        {error && !pathInvalid && <FieldError>{error}</FieldError>}
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" className={outlineButton} onClick={onClose} disabled={busy}>取消</Button>
-          <Button type="submit" className={primaryButton} disabled={busy}>{busy ? "正在扫描…" : "开始扫描"}</Button>
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={busy}>取消</Button>
+          <Button type="submit" size="sm" disabled={busy}>{busy ? "正在扫描…" : "开始扫描"}</Button>
         </div>
       </form>
     </ModalFrame>
@@ -302,6 +328,7 @@ function CreateLinkDialog({ source, busy, onClose, onCreate }: CreateLinkDialogP
   const [folder, setFolder] = useState("");
   const [name, setName] = useState(basename(source.path));
   const [error, setError] = useState("");
+  const [errorField, setErrorField] = useState<"folder" | "name" | null>(null);
 
   async function chooseFolder() {
     try {
@@ -309,9 +336,11 @@ function CreateLinkDialog({ source, busy, onClose, onCreate }: CreateLinkDialogP
       if (result) {
         setFolder(result);
         setError("");
+        setErrorField(null);
       }
     } catch (cause) {
       setError(errorText(cause));
+      setErrorField(null);
     }
   }
 
@@ -320,47 +349,49 @@ function CreateLinkDialog({ source, busy, onClose, onCreate }: CreateLinkDialogP
     const targetFolder = folder.trim();
     if (!targetFolder) {
       setError("请输入目标文件夹的绝对路径");
+      setErrorField("folder");
       return;
     }
     if (!isAbsolutePath(targetFolder)) {
       setError("请输入目标文件夹的绝对路径，例如 C:\\workspace\\project");
+      setErrorField("folder");
       return;
     }
     if (!name.trim()) {
       setError("请输入链接名称");
+      setErrorField("name");
       return;
     }
     setError("");
+    setErrorField(null);
     try {
       await onCreate(targetFolder, name.trim());
     } catch (cause) {
       setError(errorText(cause));
+      setErrorField(null);
     }
   }
 
   return (
     <ModalFrame heading="新增链接" description="事实源保持在原位置，只在项目中创建入口。" busy={busy} onClose={onClose}>
-      <form onSubmit={submit} className="mt-5 space-y-4">
-        <div>
-          <label className="mb-1.5 block text-[11px] font-medium text-[var(--muted)]" htmlFor="source-path">事实源</label>
-          <Input id="source-path" value={source.path} readOnly className={`${fieldClass} text-[var(--faint)]`} />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-[11px] font-medium text-[var(--muted)]" htmlFor="target-folder">目标文件夹绝对路径</label>
-          <div className="flex gap-2">
-            <Input id="target-folder" value={folder} onChange={(event) => { setFolder(event.target.value); setError(""); }} placeholder={pathExample("project")} className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--base)] px-3 py-2 text-[11px] text-[var(--text)] placeholder:text-[var(--faint)]" autoFocus />
-            <Button type="button" className={outlineButton} onClick={chooseFolder} disabled={busy}>浏览</Button>
-          </div>
-        </div>
-        <div>
-          <label className="mb-1.5 block text-[11px] font-medium text-[var(--muted)]" htmlFor="link-name">链接名称</label>
-          <Input id="link-name" value={name} onChange={(event) => setName(event.target.value)} className={fieldClass} />
-          <p className="mt-1.5 text-[10px] text-[var(--faint)]">目标位置若已有同名文件或链接，应用会拒绝覆盖。</p>
-        </div>
-        {error && <p role="alert" className="text-[11px] text-[var(--warn)]">{error}</p>}
+      <form onSubmit={submit} className="mt-5 flex flex-col gap-4">
+        <FieldGroup className="gap-4">
+          <Field>
+            <FieldLabel htmlFor="source-path">事实源</FieldLabel>
+            <Input id="source-path" value={source.path} readOnly />
+          </Field>
+          <PathPickerField id="target-folder" label="目标文件夹绝对路径" value={folder} onChange={(value) => { setFolder(value); setError(""); setErrorField(null); }} onBrowse={chooseFolder} placeholder={pathExample("project")} error={errorField === "folder" ? error : undefined} busy={busy} autoFocus />
+          <Field data-invalid={errorField === "name"}>
+            <FieldLabel htmlFor="link-name">链接名称</FieldLabel>
+            <Input id="link-name" value={name} onChange={(event) => { setName(event.target.value); setError(""); setErrorField(null); }} aria-invalid={errorField === "name"} aria-describedby={errorField === "name" ? "link-name-description link-name-error" : "link-name-description"} />
+            <FieldDescription id="link-name-description">目标位置若已有同名文件或链接，应用会拒绝覆盖。</FieldDescription>
+            {errorField === "name" && <FieldError id="link-name-error">{error}</FieldError>}
+          </Field>
+        </FieldGroup>
+        {error && errorField === null && <FieldError>{error}</FieldError>}
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" className={outlineButton} onClick={onClose} disabled={busy}>取消</Button>
-          <Button type="submit" className={primaryButton} disabled={busy}>{busy ? "正在创建…" : "创建链接"}</Button>
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={busy}>取消</Button>
+          <Button type="submit" size="sm" disabled={busy}>{busy ? "正在创建…" : "创建链接"}</Button>
         </div>
       </form>
     </ModalFrame>
@@ -390,6 +421,7 @@ function BatchCreateDialog({ sources, busy, onClose, onPreview, onExecute }: Bat
   const [previewFolder, setPreviewFolder] = useState<string | null>(null);
   const [operation, setOperation] = useState<BatchOperationResult | null>(null);
   const [error, setError] = useState("");
+  const [pathInvalid, setPathInvalid] = useState(false);
   const previewRequest = useRef(0);
 
   function invalidatePreview() {
@@ -406,9 +438,11 @@ function BatchCreateDialog({ sources, busy, onClose, onPreview, onExecute }: Bat
         setFolder(result);
         invalidatePreview();
         setError("");
+        setPathInvalid(false);
       }
     } catch (cause) {
       setError(errorText(cause));
+      setPathInvalid(false);
     }
   }
 
@@ -417,13 +451,16 @@ function BatchCreateDialog({ sources, busy, onClose, onPreview, onExecute }: Bat
     const targetFolder = folder.trim();
     if (!targetFolder) {
       setError("请输入批量创建的目标文件夹绝对路径");
+      setPathInvalid(true);
       return;
     }
     if (!isAbsolutePath(targetFolder)) {
       setError("请输入目标文件夹的绝对路径，例如 C:\\workspace\\project");
+      setPathInvalid(true);
       return;
     }
     setError("");
+    setPathInvalid(false);
     invalidatePreview();
     const request = previewRequest.current;
     try {
@@ -433,13 +470,17 @@ function BatchCreateDialog({ sources, busy, onClose, onPreview, onExecute }: Bat
         setPreviewFolder(targetFolder);
       }
     } catch (cause) {
-      if (request === previewRequest.current) setError(errorText(cause));
+      if (request === previewRequest.current) {
+        setError(errorText(cause));
+        setPathInvalid(false);
+      }
     }
   }
 
   async function execute() {
     if (!preview || !previewFolder || !preview.items.some((item) => item.status === "ready")) return;
     setError("");
+    setPathInvalid(false);
     try {
       const approved = preview.items.filter((item) => item.status === "ready");
       const result = await onExecute(previewFolder, approved.map((item) => item.source), preview.items.length);
@@ -452,6 +493,7 @@ function BatchCreateDialog({ sources, busy, onClose, onPreview, onExecute }: Bat
       });
     } catch (cause) {
       setError(errorText(cause));
+      setPathInvalid(false);
     }
   }
 
@@ -459,18 +501,14 @@ function BatchCreateDialog({ sources, busy, onClose, onPreview, onExecute }: Bat
 
   return (
     <ModalFrame heading="批量创建链接" description={`将为 ${sources.length} 个选中的事实源，在同一目标文件夹中创建链接。`} busy={busy} onClose={onClose}>
-      <form onSubmit={submitPreview} className="mt-5 space-y-4">
-        <div>
-          <label className="mb-1.5 block text-[11px] font-medium text-[var(--muted)]" htmlFor="batch-target-folder">统一目标文件夹绝对路径</label>
-          <div className="flex gap-2">
-            <Input id="batch-target-folder" value={folder} onChange={(event) => { setFolder(event.target.value); invalidatePreview(); setError(""); }} placeholder={pathExample("project")} className={`${fieldClass} min-w-0 flex-1`} autoFocus disabled={busy} />
-            <Button type="button" className={outlineButton} onClick={chooseFolder} disabled={busy}>浏览</Button>
-          </div>
-        </div>
-        {error && <p role="alert" className="text-[11px] text-[var(--warn)]">{error}</p>}
+      <form onSubmit={submitPreview} className="mt-5 flex flex-col gap-4">
+        <FieldGroup>
+          <PathPickerField id="batch-target-folder" label="统一目标文件夹绝对路径" value={folder} onChange={(value) => { setFolder(value); invalidatePreview(); setError(""); setPathInvalid(false); }} onBrowse={chooseFolder} placeholder={pathExample("project")} error={pathInvalid ? error : undefined} busy={busy} autoFocus />
+        </FieldGroup>
+        {error && !pathInvalid && <FieldError>{error}</FieldError>}
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" className={outlineButton} onClick={onClose} disabled={busy}>取消</Button>
-          {!operation && <Button type="submit" className={primaryButton} disabled={busy}>{busy ? "正在预览…" : "预览冲突"}</Button>}
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={busy}>取消</Button>
+          {!operation && <Button type="submit" size="sm" disabled={busy}>{busy ? "正在预览…" : "预览冲突"}</Button>}
         </div>
       </form>
 
@@ -486,7 +524,7 @@ function BatchCreateDialog({ sources, busy, onClose, onPreview, onExecute }: Bat
               </div>
             ))}
           </div>
-          {!operation && <Button type="button" className={`${primaryButton} mt-3 w-full`} onClick={execute} disabled={busy || readyCount === 0}>{busy ? "正在创建…" : "确认并创建"}</Button>}
+          {!operation && <Button type="button" size="sm" className="mt-3 w-full" onClick={execute} disabled={busy || readyCount === 0}>{busy ? "正在创建…" : "确认并创建"}</Button>}
         </section>
       )}
 
@@ -576,7 +614,7 @@ function BatchDeleteDialog({ sources, busy, onClose, onPreview, onExecute }: Bat
               </div>
             ))}
           </div> : <p className="py-3 text-[10px] text-[var(--faint)]">选中的事实源没有受管理链接。</p>}
-          {!operation && <div className="mt-3 flex gap-2"><Button type="button" className={`${outlineButton} flex-1`} onClick={loadPreview} disabled={busy}>重新预览</Button><Button type="button" className={`${primaryButton} flex-1`} onClick={execute} disabled={busy || readyCount === 0}>{busy ? "正在删除…" : "确认并删除"}</Button></div>}
+          {!operation && <div className="mt-3 flex gap-2"><Button type="button" variant="outline" size="sm" className="flex-1" onClick={loadPreview} disabled={busy}>重新预览</Button><Button type="button" size="sm" className="flex-1" onClick={execute} disabled={busy || readyCount === 0}>{busy ? "正在删除…" : "确认并删除"}</Button></div>}
         </section>
       )}
       {operation && (
@@ -593,8 +631,8 @@ function BatchDeleteDialog({ sources, busy, onClose, onPreview, onExecute }: Bat
           </div>
         </section>
       )}
-      {!preview && <div className="mt-5 flex justify-end"><Button type="button" className={outlineButton} onClick={onClose} disabled={busy}>取消</Button></div>}
-      {operation && <div className="mt-5 flex justify-end"><Button type="button" className={outlineButton} onClick={onClose} disabled={busy}>完成</Button></div>}
+      {!preview && <div className="mt-5 flex justify-end"><Button type="button" variant="outline" size="sm" onClick={onClose} disabled={busy}>取消</Button></div>}
+      {operation && <div className="mt-5 flex justify-end"><Button type="button" variant="outline" size="sm" onClick={onClose} disabled={busy}>完成</Button></div>}
     </ModalFrame>
   );
 }
@@ -887,11 +925,11 @@ function App() {
   const sidebar = (
     <>
       {isMobile && <div className="sidebar-header"><Button variant="ghost" size="icon-sm" aria-label="收起侧栏" onClick={() => setMobileSideOpen(false)}><SidebarSimple size={17} /></Button></div>}
-      <div className="sidebar-search">
-        <MagnifyingGlass size={15} aria-hidden="true" />
-        <Input ref={searchRef} value={query} onChange={(event) => { setQuery(event.target.value); setSelectedSources([]); }} placeholder="搜索事实源" aria-label="搜索事实源" />
-        <kbd>⌘ K</kbd>
-      </div>
+      <InputGroup className="sidebar-search">
+        <InputGroupInput ref={searchRef} value={query} onChange={(event) => { setQuery(event.target.value); setSelectedSources([]); }} placeholder="搜索事实源" aria-label="搜索事实源" />
+        <InputGroupAddon align="inline-start"><MagnifyingGlass aria-hidden="true" /></InputGroupAddon>
+        <InputGroupAddon align="inline-end"><Kbd>⌘ K</Kbd></InputGroupAddon>
+      </InputGroup>
       <div className="group-title">
         <span>事实源 <small>{snapshot?.sources.length ?? 0}</small></span>
         <DropdownMenu>

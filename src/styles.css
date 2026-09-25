@@ -171,9 +171,7 @@ button:disabled { cursor: not-allowed; }
 .mobile-sidebar { width: min(280px, 85vw); max-width: none; gap: 0; padding-top: 0; }
 .sidebar-header { height: 44px; flex: none; display: flex; align-items: center; padding: 0 8px; }
 .sidebar-header button { color: var(--faint); }
-.sidebar-search { height: 33px; display: flex; align-items: center; gap: 7px; margin: 7px 4px 20px; padding: 0 8px; background: var(--background); border: 1px solid var(--input); border-radius: 7px; color: var(--faint); }
-.sidebar-search input { height: 29px; min-width: 0; padding: 0; border: 0; box-shadow: none; background: transparent; font-size: 13px; }
-.sidebar-search kbd { white-space: nowrap; color: var(--faint); font-size: 11px; }
+.sidebar-search { margin: 7px 4px 20px; background: var(--background); }
 .group-title { height: 29px; display: flex; align-items: center; justify-content: space-between; padding: 0 7px 0 12px; color: var(--muted); font-size: 12px; font-weight: 610; }
 .group-title small { margin-left: 3px; color: var(--faint); font-weight: 500; }
 .group-title button { width: 24px; height: 24px; color: var(--faint); }
