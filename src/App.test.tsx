@@ -30,7 +30,31 @@ const snapshot: Snapshot = {
   }],
 };
 
+async function chooseSourceAction(user: ReturnType<typeof userEvent.setup>, action: string) {
+  await user.click(screen.getByRole("button", { name: "添加事实源" }));
+  await user.click(screen.getByRole("menuitem", { name: action }));
+}
+
+async function beginBatchSelection(user: ReturnType<typeof userEvent.setup>) {
+  await chooseSourceAction(user, "批量选择");
+}
+
+async function chooseLinkFilter(user: ReturnType<typeof userEvent.setup>, option: string) {
+  await user.click(screen.getByRole("button", { name: "筛选链接状态" }));
+  await user.click(screen.getByRole("menuitem", { name: option }));
+}
+
+async function chooseTagFilter(user: ReturnType<typeof userEvent.setup>, option: string) {
+  await user.click(screen.getByRole("combobox", { name: "按标签筛选" }));
+  await user.click(screen.getByRole("option", { name: option }));
+}
+
 beforeEach(() => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440 });
+  Element.prototype.hasPointerCapture = () => false;
+  Element.prototype.setPointerCapture = () => {};
+  Element.prototype.releasePointerCapture = () => {};
+  Element.prototype.scrollIntoView = () => {};
   localStorage.clear();
   invoke.mockReset().mockResolvedValue(snapshot);
   open.mockReset().mockResolvedValue("/projects/beta");
@@ -43,8 +67,8 @@ test("shows a scanned link and a rejected name collision without losing the exis
   const user = userEvent.setup();
   render(<App />);
   expect(await screen.findByRole("heading", { name: "shared.md" })).toBeTruthy();
-  expect(screen.getByRole("button", { name: /alpha.*正常/s })).toBeTruthy();
-  expect(within(screen.getByRole("region", { name: "窄窗口链接操作" })).getByRole("button", { name: "删除当前链接" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: `查看链接 alpha ${link}` }));
+  expect(within(screen.getByRole("complementary", { name: "链接详情" })).getByRole("button", { name: "删除链接" })).toBeTruthy();
 
   invoke.mockImplementation((command: string) => {
     if (command === "create_link") return Promise.reject("目标位置已经有文件、文件夹或软链接；未进行覆盖");
@@ -56,7 +80,8 @@ test("shows a scanned link and a rejected name collision without losing the exis
   await user.click(within(dialog).getByRole("button", { name: "创建链接" }));
 
   expect(await within(dialog).findByRole("alert")).toHaveProperty("textContent", expect.stringContaining("未进行覆盖"));
-  expect(screen.getByRole("button", { name: /alpha.*正常/s })).toBeTruthy();
+  await user.click(within(dialog).getByRole("button", { name: "关闭" }));
+  expect(screen.getByRole("button", { name: `查看链接 alpha ${link}` })).toBeTruthy();
   expect(invoke).toHaveBeenCalledWith("create_link", { source, folder: "/projects/beta", name: "shared.md" });
 });
 
@@ -66,11 +91,11 @@ test("filters broken links as issues", async () => {
   broken.sources[0].links[0].status = "source_missing";
   invoke.mockResolvedValue(broken);
   render(<App />);
-  expect(await screen.findByRole("button", { name: /alpha.*源文件缺失/s })).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "正常" }));
+  expect(await screen.findByRole("button", { name: `查看链接 alpha ${link}` })).toBeTruthy();
+  await chooseLinkFilter(user, "正常");
   expect(screen.getByText("此筛选条件下没有链接")).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "需处理" }));
-  expect(screen.getByRole("button", { name: /alpha.*源文件缺失/s })).toBeTruthy();
+  await chooseLinkFilter(user, "需处理");
+  expect(screen.getByRole("button", { name: `查看链接 alpha ${link}` })).toBeTruthy();
 });
 
 test("marks a source replaced by a symlink and blocks new links", async () => {
@@ -82,6 +107,25 @@ test("marks a source replaced by a symlink and blocks new links", async () => {
   expect(screen.getByRole("button", { name: "新增链接" })).toHaveProperty("disabled", true);
 });
 
+test("requires confirmation before deleting a link and blocks deletion when its path was replaced", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  expect(await screen.findByRole("heading", { name: "shared.md" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: `查看链接 alpha ${link}` }));
+  await user.click(screen.getByRole("button", { name: "删除链接" }));
+  expect(confirm).toHaveBeenCalledWith(expect.stringContaining("事实源 /source/shared.md 会保留"), { title: "删除链接", kind: "warning" });
+  expect(invoke).not.toHaveBeenCalledWith("delete_link", expect.anything());
+  cleanup();
+
+  const replaced: Snapshot = structuredClone(snapshot);
+  replaced.sources[0].links[0].status = "replaced";
+  invoke.mockResolvedValue(replaced);
+  render(<App />);
+  expect(await screen.findByRole("heading", { name: "shared.md" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: `查看链接 alpha ${link}` }));
+  expect(screen.getByRole("button", { name: "删除链接" })).toHaveProperty("disabled", true);
+});
+
 test("keeps the batch preview tied to its folder and keyboard focus inside the dialog", async () => {
   const user = userEvent.setup();
   let resolvePreview!: (value: BatchPreview) => void;
@@ -89,6 +133,7 @@ test("keeps the batch preview tied to its folder and keyboard focus inside the d
   invoke.mockImplementation((command: string) => command === "preview_batch_create" ? delayedPreview : Promise.resolve(snapshot));
   render(<App />);
   expect(await screen.findByRole("heading", { name: "shared.md" })).toBeTruthy();
+  await beginBatchSelection(user);
   await user.click(screen.getByRole("checkbox", { name: "选择事实源 shared.md" }));
   await user.click(screen.getByRole("button", { name: "批量创建链接" }));
   const dialog = screen.getByRole("dialog", { name: "批量创建链接" });
@@ -113,9 +158,10 @@ test("does not focus background search with Ctrl+K while a dialog is open", asyn
   expect(await screen.findByRole("heading", { name: "shared.md" })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "新增链接" }));
   const dialog = screen.getByRole("dialog", { name: "新增链接" });
+  const search = screen.getByRole("textbox", { name: "搜索事实源", hidden: true });
   await user.keyboard("{Control>}k{/Control}");
   expect(dialog.contains(document.activeElement)).toBe(true);
-  expect(document.activeElement).not.toBe(screen.getByRole("textbox", { name: "搜索事实源" }));
+  expect(document.activeElement).not.toBe(search);
 });
 
 test("accepts manually entered absolute paths for sources, scan roots, and links", async () => {
@@ -123,8 +169,7 @@ test("accepts manually entered absolute paths for sources, scan roots, and links
   render(<App />);
   expect(await screen.findByRole("heading", { name: "shared.md" })).toBeTruthy();
 
-  await user.click(screen.getByRole("button", { name: "添加事实源" }));
-  await user.click(screen.getByRole("button", { name: "添加文件" }));
+  await chooseSourceAction(user, "添加文件");
   const sourceDialog = screen.getByRole("dialog", { name: "添加文件事实源" });
   await user.type(within(sourceDialog).getByLabelText("事实源绝对路径"), "C:\\workspace\\shared.md");
   await user.click(within(sourceDialog).getByRole("button", { name: "添加事实源" }));
@@ -158,8 +203,7 @@ test("opens the canonical source returned after adding an alias path", async () 
   invoke.mockImplementation((command: string) => Promise.resolve(command === "add_source" ? added : initial));
   render(<App />);
   expect(await screen.findByRole("heading", { name: "first.md" })).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "添加事实源" }));
-  await user.click(screen.getByRole("button", { name: "添加文件" }));
+  await chooseSourceAction(user, "添加文件");
   const dialog = screen.getByRole("dialog", { name: "添加文件事实源" });
   await user.type(within(dialog).getByLabelText("事实源绝对路径"), "C:\\workspace\\nested\\..\\shared.md");
   await user.click(within(dialog).getByRole("button", { name: "添加事实源" }));
@@ -183,15 +227,17 @@ test("persists source tags and filters the source list by one tag", async () => 
   render(<App />);
   expect(await screen.findByRole("heading", { name: "shared.md" })).toBeTruthy();
 
-  await user.selectOptions(screen.getByRole("combobox", { name: "按标签筛选" }), "文档");
+  await chooseTagFilter(user, "文档");
   expect(screen.getByRole("button", { name: "打开事实源 shared.md" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "打开事实源 other.md" })).toBeNull();
+  await beginBatchSelection(user);
   await user.click(screen.getByRole("button", { name: "全选" }));
-  expect(screen.getByRole("checkbox", { name: "选择事实源 shared.md" })).toHaveProperty("checked", true);
-  await user.selectOptions(screen.getByRole("combobox", { name: "按标签筛选" }), "代码");
+  expect(screen.getByRole("checkbox", { name: "选择事实源 shared.md" }).getAttribute("aria-checked")).toBe("true");
+  await chooseTagFilter(user, "代码");
   expect(screen.queryByRole("button", { name: "批量创建链接" })).toBeNull();
-  await user.selectOptions(screen.getByRole("combobox", { name: "按标签筛选" }), "文档");
+  await chooseTagFilter(user, "文档");
 
+  await user.click(screen.getByRole("button", { name: "编辑标签" }));
   const tagInput = screen.getByRole("textbox", { name: "事实源标签输入" });
   await user.clear(tagInput);
   await user.type(tagInput, "团队, 文档");
@@ -242,12 +288,12 @@ test("previews and reports batch creation and deletion results", async () => {
   });
   render(<App />);
   expect(await screen.findByRole("heading", { name: "shared.md" })).toBeTruthy();
+  await beginBatchSelection(user);
   await user.click(screen.getByRole("checkbox", { name: "选择事实源 shared.md" }));
   await user.click(screen.getByRole("checkbox", { name: "选择事实源 other.md" }));
 
   await user.click(screen.getByRole("button", { name: "批量创建链接" }));
   const createDialog = screen.getByRole("dialog", { name: "批量创建链接" });
-  await user.click(screen.getByRole("checkbox", { name: "选择事实源 other.md" }));
   await user.type(within(createDialog).getByLabelText("统一目标文件夹绝对路径"), "/projects/batch");
   await user.click(within(createDialog).getByRole("button", { name: "预览冲突" }));
   expect(await within(createDialog).findByText("会被阻止")).toBeTruthy();
@@ -262,15 +308,12 @@ test("previews and reports batch creation and deletion results", async () => {
   expect(invoke).toHaveBeenCalledWith("batch_create_links", { sources: [source], folder: "/projects/changed" });
   expect(await within(createDialog).findByText("成功")).toBeTruthy();
   expect(within(createDialog).getByText(/预览已阻止：目标位置已存在/)).toBeTruthy();
-  expect(screen.getByRole("status")).toHaveProperty("textContent", expect.stringContaining("1/2 项成功"));
-
   await user.click(within(createDialog).getByRole("button", { name: "关闭" }));
-  await user.click(screen.getByRole("checkbox", { name: "选择事实源 other.md" }));
+  expect(screen.getByRole("status")).toHaveProperty("textContent", expect.stringContaining("1/2 项成功"));
   await user.click(screen.getByRole("button", { name: "批量删除链接" }));
   const deleteDialog = screen.getByRole("dialog", { name: "批量删除链接" });
   expect(await within(deleteDialog).findByText(/可删除/)).toBeTruthy();
   expect(invoke).toHaveBeenCalledWith("preview_batch_delete", { sources: [source, secondSource] });
-  await user.click(screen.getByRole("checkbox", { name: "选择事实源 other.md" }));
   await user.click(within(deleteDialog).getByRole("button", { name: "确认并删除" }));
   expect(await within(deleteDialog).findByText("成功")).toBeTruthy();
   expect(within(deleteDialog).getByText(/预览已阻止：链接已被替换/)).toBeTruthy();
