@@ -63,6 +63,26 @@ beforeEach(() => {
 
 afterEach(() => cleanup());
 
+test("keeps the same sidebar control through collapse and expansion", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("heading", { name: "shared.md" });
+
+  const toggle = screen.getByRole("button", { name: "收起侧栏" });
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  await user.click(toggle);
+
+  const expand = screen.getByRole("button", { name: "展开侧栏" });
+  expect(expand).toBe(toggle);
+  expect(expand.getAttribute("aria-expanded")).toBe("false");
+  expect(screen.queryByRole("navigation", { name: "事实源列表" })).toBeNull();
+
+  await user.click(expand);
+  expect(screen.getByRole("button", { name: "收起侧栏" })).toBe(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  expect(screen.getByRole("navigation", { name: "事实源列表" })).toBeTruthy();
+});
+
 test("shows a scanned link and a rejected name collision without losing the existing link", async () => {
   const user = userEvent.setup();
   render(<App />);

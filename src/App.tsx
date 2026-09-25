@@ -886,9 +886,7 @@ function App() {
 
   const sidebar = (
     <>
-      <div className="sidebar-header" data-tauri-drag-region>
-        <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon-sm" aria-label="收起侧栏" onClick={() => isMobile ? setMobileSideOpen(false) : setSideOpen(false)}><SidebarSimple size={17} /></Button></TooltipTrigger><TooltipContent>收起侧栏</TooltipContent></Tooltip>
-      </div>
+      {isMobile && <div className="sidebar-header"><Button variant="ghost" size="icon-sm" aria-label="收起侧栏" onClick={() => setMobileSideOpen(false)}><SidebarSimple size={17} /></Button></div>}
       <div className="sidebar-search">
         <MagnifyingGlass size={15} aria-hidden="true" />
         <Input ref={searchRef} value={query} onChange={(event) => { setQuery(event.target.value); setSelectedSources([]); }} placeholder="搜索事实源" aria-label="搜索事实源" />
@@ -936,10 +934,12 @@ function App() {
   return (
     <TooltipProvider>
       <div className={`app ${!sidebarVisible ? "side-collapsed" : ""} ${link && !isCompact ? "inspector-open" : ""}`}>
+        <div className="window-chrome" data-tauri-drag-region>
+          <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon-sm" className="sidebar-toggle" aria-label={sidebarVisible ? "收起侧栏" : "展开侧栏"} aria-expanded={sidebarVisible} onClick={() => isMobile ? setMobileSideOpen((value) => !value) : setSideOpen((value) => !value)}><SidebarSimple size={17} /></Button></TooltipTrigger><TooltipContent>{sidebarVisible ? "收起侧栏" : "展开侧栏"}</TooltipContent></Tooltip>
+        </div>
         {isMobile ? <Sheet open={mobileSideOpen} onOpenChange={setMobileSideOpen}><SheetContent side="left" showCloseButton={false} className="sidebar mobile-sidebar"><SheetTitle className="sr-only">事实源</SheetTitle>{sidebar}</SheetContent></Sheet> : sideOpen && <aside className="sidebar">{sidebar}</aside>}
         <div className="workspace">
           <header className="topbar" data-tauri-drag-region>
-            {!sidebarVisible && <Button variant="ghost" size="icon-sm" aria-label="展开侧栏" onClick={() => isMobile ? setMobileSideOpen(true) : setSideOpen(true)}><SidebarSimple size={17} /></Button>}
             <span className="top-label">事实源</span>
             <div className="top-right flex items-center gap-1">
               <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon-sm" onClick={refresh} disabled={busy || loading} aria-label="刷新链接状态"><ArrowClockwise size={16} className={busy ? "animate-spin" : ""} /></Button></TooltipTrigger><TooltipContent>刷新链接状态</TooltipContent></Tooltip>
