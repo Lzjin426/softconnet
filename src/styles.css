@@ -161,9 +161,12 @@ button:disabled { cursor: not-allowed; }
 .path { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .window-chrome { position: absolute; z-index: 2; top: 0; left: 0; width: 252px; height: 44px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--sidebar); }
-.side-collapsed .window-chrome { border-right: 0; background: var(--background); }
-.sidebar-toggle { position: absolute; top: 8px; left: 12px; color: var(--faint); }
-.macos-overlay .sidebar-toggle { left: 80px; }
+.side-collapsed .window-chrome { width: 44px; border-right: 0; background: var(--background); }
+.sidebar-toggle { position: absolute; top: 8px; right: 12px; color: var(--faint); }
+.sidebar-toggle[aria-expanded="true"]:not(:hover) { background: transparent; color: var(--faint); }
+.side-collapsed .sidebar-toggle { right: auto; left: 8px; }
+.macos-overlay .side-collapsed .window-chrome { width: 116px; }
+.macos-overlay .side-collapsed .sidebar-toggle { left: 80px; }
 .sidebar { display: flex; flex-direction: column; min-width: 0; height: 100dvh; padding: 44px 7px 0; background: var(--sidebar); border-right: 1px solid var(--border); }
 .mobile-sidebar { width: min(280px, 85vw); max-width: none; gap: 0; padding-top: 0; }
 .sidebar-header { height: 44px; flex: none; display: flex; align-items: center; padding: 0 8px; }
@@ -196,7 +199,8 @@ button:disabled { cursor: not-allowed; }
 
 .workspace { display: flex; flex-direction: column; min-width: 0; height: 100dvh; }
 .topbar { display: flex; flex: none; align-items: center; gap: 11px; min-width: 0; height: 44px; padding: 0 15px; border-bottom: 1px solid var(--border); }
-.side-collapsed .topbar { padding-left: 267px; }
+.side-collapsed .topbar { padding-left: 55px; }
+.macos-overlay .side-collapsed .topbar { padding-left: 124px; }
 .topbar button { color: var(--faint); }
 .top-label { font-size: 13px; font-weight: 590; color: var(--muted); }
 .top-right { margin-left: auto; }
@@ -258,8 +262,10 @@ button:disabled { cursor: not-allowed; }
 @media (max-width: 760px) {
   .app { grid-template-columns: minmax(0, 1fr); }
   .window-chrome { width: 56px; border-right: 0; background: var(--background); }
-  .sidebar-toggle, .macos-overlay .sidebar-toggle { left: 12px; }
+  .side-collapsed .window-chrome, .macos-overlay .side-collapsed .window-chrome { width: 56px; }
+  .side-collapsed .sidebar-toggle, .macos-overlay .side-collapsed .sidebar-toggle { left: 12px; }
   .side-collapsed .topbar { padding-left: 56px; }
+  .macos-overlay .side-collapsed .topbar { padding-left: 56px; }
   .source-head, .content-section-head, .link-list { padding-left: 18px; padding-right: 18px; }
   .source-head { padding-top: 30px; }
   .list-header, .link-row { grid-template-columns: minmax(92px, .7fr) minmax(0, 1fr) 55px; column-gap: 7px; }
