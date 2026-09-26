@@ -1,0 +1,1 @@
+export { sourceNameCollisions } from "./identity";

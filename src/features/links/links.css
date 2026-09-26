@@ -1,0 +1,37 @@
+.content-section-head, .link-list { width: min(100%, 1090px); margin-inline: auto; }
+.content-section-head { display: flex; align-items: center; justify-content: space-between; height: 38px; padding: 0 42px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 590; }
+.content-section-head small { margin-left: 4px; color: var(--muted); font-size: 11px; font-weight: 500; }
+.link-list { padding: 0 42px 40px; }
+.list-header, .link-row { display: grid; grid-template-columns: minmax(130px, .8fr) minmax(180px, 2fr) 75px; align-items: center; column-gap: 18px; }
+.list-header { height: 36px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+.link-row { width: 100%; min-height: 54px; padding: 0; border: 0; border-bottom: 1px solid var(--line); background: var(--background); text-align: left; }
+.link-row:hover { background: var(--sidebar); }
+.link-row.active { background: var(--selected); }
+.link-row .project { display: flex; align-items: center; gap: 9px; min-width: 0; color: var(--text); font-size: 13px; font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.link-row .project svg { flex: none; color: var(--faint); }
+.link-row .path { color: var(--muted); font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 11px; }
+.link-status { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 11px; }
+.link-status.healthy { color: #526d5c; }
+.dark .link-status.healthy { color: #93b39c; }
+.link-status.problem, .problem { color: var(--warn); }
+.empty-links { display: flex; align-items: center; flex-direction: column; gap: 6px; padding: 88px 20px; color: var(--faint); text-align: center; }
+.empty-links strong { margin-top: 6px; color: var(--muted); font-size: 12px; font-weight: 590; }
+.empty-links span { font-size: 11px; }
+
+.inspector { min-width: 0; display: flex; flex-direction: column; padding: 0 20px; border-left: 1px solid var(--border); }
+.compact-inspector { width: min(350px, 90vw); max-width: none; gap: 0; }
+.inspector-top { display: flex; align-items: center; justify-content: space-between; height: 44px; color: var(--faint); font-size: 11px; }
+.inspector-top button { width: 25px; height: 25px; color: var(--faint); }
+.inspector h2 { margin: 22px 0 10px; font-size: 15px; font-weight: 610; }
+.inspector-field { padding-top: 22px; }
+.inspector-field small { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11px; }
+.inspector-field p { margin: 0; color: var(--muted); font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 11px; line-height: 1.55; overflow-wrap: anywhere; }
+.inspector-field strong { font-size: 11px; font-weight: 550; }
+.inspector-actions { display: flex; gap: 7px; margin-top: 26px; }
+.inspector-actions button { height: 28px; font-size: 11px; }
+.inspector-note { margin-top: 9px; color: var(--faint); font-size: 11px; }
+.link-row:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; border-radius: 5px; }
+@media (max-width: 1050px) { .content-section-head, .link-list { padding-inline: 27px; } }
+@media (max-width: 900px) { .list-header, .link-row { grid-template-columns: minmax(110px, .8fr) minmax(0, 1.7fr) 68px; gap: 10px; } }
+@media (max-width: 760px) { .content-section-head, .link-list { padding-inline: 18px; } .list-header, .link-row { grid-template-columns: minmax(92px, .7fr) minmax(0, 1fr) 55px; column-gap: 7px; } }
+@media (max-width: 520px) { .inspector-actions { flex-wrap: wrap; } }

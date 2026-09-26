@@ -51,6 +51,11 @@ async function chooseTagFilter(user: ReturnType<typeof userEvent.setup>, option:
 
 beforeEach(() => {
   Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440 });
+  vi.stubGlobal("ResizeObserver", class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  });
   Element.prototype.hasPointerCapture = () => false;
   Element.prototype.setPointerCapture = () => {};
   Element.prototype.releasePointerCapture = () => {};
@@ -81,6 +86,92 @@ test("keeps the same sidebar control through collapse and expansion", async () =
   expect(screen.getByRole("button", { name: "收起侧栏" })).toBe(toggle);
   expect(toggle.getAttribute("aria-expanded")).toBe("true");
   expect(screen.getByRole("navigation", { name: "事实源列表" })).toBeTruthy();
+});
+
+test("shows a retryable load error instead of an empty library", async () => {
+  const user = userEvent.setup();
+  invoke.mockRejectedValueOnce("读取记录失败").mockResolvedValue(snapshot);
+  render(<App />);
+
+  expect(await screen.findByRole("heading", { name: "无法读取事实源" })).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "还没有事实源" })).toBeNull();
+  expect(screen.getByRole("button", { name: "添加事实源" })).toHaveProperty("disabled", true);
+  expect(screen.getByRole("textbox", { name: "搜索事实源" })).toHaveProperty("disabled", true);
+  expect(screen.getByRole("button", { name: "刷新链接状态" })).toHaveProperty("disabled", true);
+  await user.click(screen.getByRole("button", { name: "重试读取" }));
+  expect(await screen.findByRole("heading", { name: "shared.md" })).toBeTruthy();
+});
+
+test("keeps the open source identifiable when filters hide it and distinguishes duplicate names", async () => {
+  const user = userEvent.setup();
+  const duplicate: Snapshot = {
+    ...snapshot,
+    sources: [
+      snapshot.sources[0],
+      { path: "/archive/shared.md", kind: "file", manual: true, tags: [], links: [] },
+    ],
+  };
+  invoke.mockResolvedValue(duplicate);
+  render(<App />);
+  expect(await screen.findByRole("heading", { name: "shared.md" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "打开事实源 /source/shared.md" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "打开事实源 /archive/shared.md" })).toBeTruthy();
+  expect(screen.getByText("/source")).toBeTruthy();
+  expect(screen.getByText("/archive")).toBeTruthy();
+
+  await user.type(screen.getByRole("textbox", { name: "搜索事实源" }), "/archive/");
+  expect(screen.queryByRole("button", { name: "打开事实源 /source/shared.md" })).toBeNull();
+  expect(screen.getByText("当前事实源不在搜索或标签筛选结果中")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "清除筛选" }));
+  expect(screen.getByRole("button", { name: "打开事实源 /source/shared.md" })).toBeTruthy();
+});
+
+test("lets a failed batch delete preview retry without losing the selected source", async () => {
+  const user = userEvent.setup();
+  let attempts = 0;
+  invoke.mockImplementation((command: string) => {
+    if (command === "preview_batch_delete") {
+      attempts += 1;
+      return attempts === 1 ? Promise.reject("预览暂时失败") : Promise.resolve({ items: [{ source, path: link, status: "ready", message: "可以删除软链接" }] });
+    }
+    return Promise.resolve(snapshot);
+  });
+  render(<App />);
+  await screen.findByRole("heading", { name: "shared.md" });
+  await beginBatchSelection(user);
+  await user.click(screen.getByRole("checkbox", { name: "选择事实源 shared.md" }));
+  await user.click(screen.getByRole("button", { name: "批量删除链接" }));
+  const dialog = screen.getByRole("dialog", { name: "批量删除链接" });
+  expect(await within(dialog).findByText("预览暂时失败")).toBeTruthy();
+  await user.click(within(dialog).getByRole("button", { name: "重试预览" }));
+  expect(await within(dialog).findByText("可以删除软链接")).toBeTruthy();
+  expect(within(dialog).getByRole("button", { name: "确认并删除" })).toBeTruthy();
+});
+
+test("shows full source identities for duplicate names in a batch preview", async () => {
+  const user = userEvent.setup();
+  const other = "/archive/shared.md";
+  const duplicate: Snapshot = {
+    ...snapshot,
+    sources: [snapshot.sources[0], { path: other, kind: "file", manual: true, tags: [], links: [] }],
+  };
+  invoke.mockImplementation((command: string) => command === "preview_batch_create"
+    ? Promise.resolve({ items: [
+      { source, path: "/projects/batch/shared.md", status: "blocked", message: "同名目标" },
+      { source: other, path: "/projects/batch/shared.md", status: "blocked", message: "同名目标" },
+    ] })
+    : Promise.resolve(duplicate));
+  render(<App />);
+  await screen.findByRole("heading", { name: "shared.md" });
+  await beginBatchSelection(user);
+  await user.click(screen.getByRole("checkbox", { name: `选择事实源 ${source}` }));
+  await user.click(screen.getByRole("checkbox", { name: `选择事实源 ${other}` }));
+  await user.click(screen.getByRole("button", { name: "批量创建链接" }));
+  const dialog = screen.getByRole("dialog", { name: "批量创建链接" });
+  await user.type(within(dialog).getByLabelText("统一目标文件夹绝对路径"), "/projects/batch");
+  await user.click(within(dialog).getByRole("button", { name: "预览冲突" }));
+  expect(await within(dialog).findByText(`事实源：${source}`)).toBeTruthy();
+  expect(within(dialog).getByText(`事实源：${other}`)).toBeTruthy();
 });
 
 test("shows a scanned link and a rejected name collision without losing the existing link", async () => {
