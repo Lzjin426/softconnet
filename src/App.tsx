@@ -715,6 +715,12 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (/Mac/.test(navigator.platform) && "__TAURI_INTERNALS__" in window) {
+      void invoke("set_sidebar_drag_state", { open: sideOpen });
+    }
+  }, [sideOpen]);
+
+  useEffect(() => {
     let live = true;
     invoke<Snapshot>("get_snapshot")
       .then((result) => { if (live) setSnapshot(result); })
